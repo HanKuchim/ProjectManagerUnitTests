@@ -127,4 +127,41 @@ public class AccountControllerTests
         Assert.Equal("Home", redirectToActionResult.ControllerName);
         
     }
+    [Fact]
+    public async System.Threading.Tasks.Task Register_InvalidModel_ReturnsViewWithModelError()
+    {
+        // Arrange
+        var model = new RegisterViewModel
+        {
+            UserName = "testuser",
+            Email = "invalid-email", // Invalid email format
+            Password = "123", // Too short
+            ConfirmPassword = "456" // Does not match password
+        };
+
+        _controller.ModelState.AddModelError("Email", "Invalid email format");
+        _controller.ModelState.AddModelError("Password", "The Password must be at least 6 characters long.");
+        _controller.ModelState.AddModelError("ConfirmPassword", "The password and confirmation password do not match.");
+
+        // Act
+        var result = await _controller.Register(model);
+
+        // Assert
+        var viewResult = Assert.IsType<ViewResult>(result);
+        var modelState = viewResult.ViewData.ModelState;
+
+        Assert.False(modelState.IsValid);
+        Assert.Equal(3, modelState.ErrorCount);
+        Assert.Contains("Email", modelState.Keys);
+        Assert.Contains("Password", modelState.Keys);
+        Assert.Contains("ConfirmPassword", modelState.Keys);
+
+        var emailError = modelState["Email"].Errors.First();
+        var passwordError = modelState["Password"].Errors.First();
+        var confirmPasswordError = modelState["ConfirmPassword"].Errors.First();
+
+        Assert.Equal("Invalid email format", emailError.ErrorMessage);
+        Assert.Equal("The Password must be at least 6 characters long.", passwordError.ErrorMessage);
+        Assert.Equal("The password and confirmation password do not match.", confirmPasswordError.ErrorMessage);
+    }
 }
